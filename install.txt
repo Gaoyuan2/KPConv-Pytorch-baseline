@@ -1,0 +1,6 @@
+matplotlib
+scikit-learn 1.0.2
+tqdm
+tensorboard
+pandas
+torch 1.12.1+cu113
