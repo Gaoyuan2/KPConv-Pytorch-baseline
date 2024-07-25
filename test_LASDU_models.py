@@ -170,9 +170,9 @@ if __name__ == '__main__':
     #     collate_fn = STPLS3DCollate
     # elif:
     if config.dataset != '':
-        test_dataset = CommonDataset(config, set='validation', use_potentials=True)
-        test_sampler = CommonSampler(test_dataset)
-        collate_fn = CommonCollate
+        test_dataset = CommonNoiseDataset(config, set='validation', use_potentials=True)
+        test_sampler = CommonNoiseSampler(test_dataset)
+        collate_fn = CommonNoiseCollate
     else:
         raise ValueError('Unsupported dataset : ' + config.dataset)
 

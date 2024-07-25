@@ -21,7 +21,6 @@
 #           Imports and global variables
 #       \**********************************/
 #
-
 # Common libs
 import time
 import numpy as np
@@ -64,7 +63,7 @@ class CommonDataset(PointCloudDataset):
         PointCloudDataset.__init__(self, config.datasetClass)
 
         ############
-        # Parameters
+        # Parameters参数
         ############
 
         if 'ISPRS' in self.name:
@@ -77,14 +76,14 @@ class CommonDataset(PointCloudDataset):
                 5: 'Roof',
                 6: 'Facade',
                 7: 'Shrub',
-                8: 'Tree'}
+                8: 'Tree'}  # 针对ISPRS建立标签字典
 
-            # List of classes ignored during training (can be empty)
+            # 训练期间被忽略的类(list) (可以为空)
             self.ignored_labels = np.array([])
             # validation Name
             self.validationFileName = ['Vaihingen3D_EVAL_WITH_REF']
             # Dataset folder
-            self.path = os.path.join('/data/Gaoyuan/Dataset/isprs_Dataset', config.dataset)
+            self.path = os.path.join('/root/autodl-tmp/Code_zjd/data', config.dataset)
 
         elif 'LASDU' in self.name:
             self.label_to_names = {
@@ -97,16 +96,18 @@ class CommonDataset(PointCloudDataset):
             }
 
             # List of classes ignored during training (can be empty)
+            # 训练期间忽略的类列表(可以为空)
             self.ignored_labels = np.array([0])
             # validation Name
             self.validationFileName = ['section_1', 'section_4']
-            # Dataset folder
-            self.path = os.path.join('/data/Gaoyuan/Dataset/LasDu', config.dataset)
-
+            # Dataset folder 数据文件夹只停留在大文件夹，不指定某一个特定的数据
+            self.path = os.path.join('/root/autodl-tmp/Code_zjd/data', config.dataset)
 
         # Initialize a bunch of variables concerning class labels
+        # 初始化一堆关于类标签的变量
         self.init_labels()
         # Type of task conducted on this dataset
+        # 在此数据集上执行的任务类型
         self.dataset_task = 'cloud_segmentation'
 
         # Update number of class and data task in configuration
@@ -140,6 +141,7 @@ class CommonDataset(PointCloudDataset):
         #     for file in files:
         #         if file.endswith(".ply"):
         #              self.cloud_names.append(os.path.join(root, file))
+        over = os.listdir(self.path)
 
         for file in os.listdir(self.path):
             if file.endswith(".ply"):
@@ -164,7 +166,7 @@ class CommonDataset(PointCloudDataset):
             return
 
         ################
-        # Load ply files
+        # Load ply files加载ply文件
         ################
         if 'H3D' in self.name:
             self.prepare_ply_H3D()
@@ -175,8 +177,7 @@ class CommonDataset(PointCloudDataset):
         elif 'DALES' in self.name:
             self.prepare_ply_DALES()
 
-
-        # List of training files
+        # List of training files生成训练文件集
         self.files = []
         for i, f in enumerate(self.cloud_names):
             if self.set == 'training':
@@ -196,7 +197,7 @@ class CommonDataset(PointCloudDataset):
                                 if self.all_splits[i] in self.validation_split]
 
         if 0 < self.config.first_subsampling_dl <= 0.01:
-            raise ValueError('subsampling_parameter too low (should be over 1 cm')
+            raise ValueError('subsampling_parameter 过低 (should be over 1 cm')
 
         # Initiate containers
         self.input_trees = []
@@ -719,8 +720,11 @@ class CommonDataset(PointCloudDataset):
         return
 
     def prepare_ply_LASDU(self):
+        """
+        LASDU数据预处理阶段
+        """
 
-        print('\nPreparing ply files')
+        print('\n开始处理ply文件(LASDU数据集)')
         t0 = time.time()
 
         ply_path = join(self.path, self.train_path)
@@ -728,17 +732,23 @@ class CommonDataset(PointCloudDataset):
             makedirs(ply_path)
         count = 1
         for root, dirs, files in os.walk(self.path):
+            if root != self.path:  # 只读取当前目录，不读取当前目录下的子目录
+                continue
             for file in files:
-                if file.endswith(".ply"):
+                if file.endswith(".ply"):  # 是否以ply字符串结尾
                     # Pass if the cloud has already been computed
                     cloud_file = join(ply_path, file)
-                    if exists(cloud_file):
+                    if exists(cloud_file):  # 如果存在cloud_file文件则跳出当前循环
+                        print('LADSU文件进度 %d/%d - 已存在当前文件：%s' % (count, len(self.cloud_names), file))
+                        count += 1
                         continue
-                    print('Cloud %d/%d - %s' % (count, len(self.cloud_names), file))
+                    print('LADSU文件进度 %d/%d - 正在当前文件：%s' % (count, len(self.cloud_names), file))
                     count += 1
 
                     cloud = read_ply(join(root, file))
                     cloud = np.vstack((cloud['x'], cloud['y'], cloud['z'], cloud['Intensity'], cloud['class'])).T
+                    # 将 cloud 字典中名为 'x'、'y'、'z'、'Intensity' 和 'class' 的键对应的值进行垂直堆叠，并对结果进行转置
+                    # cloud['x']存x的数，cloud['y']存y的数...
 
                     limitMin = np.amin(cloud[:, 0:3], axis=0)
                     cloud[:, 0:3] -= limitMin
@@ -749,7 +759,7 @@ class CommonDataset(PointCloudDataset):
                     labels = cloud[:, 4].astype(np.int32)
 
                     write_ply(cloud_file, (xyz, colors, labels), ['x', 'y', 'z', 'Intensity', 'class'])
-        print('Done in {:.1f}s'.format(time.time() - t0))
+        print('LASDU的ply文件处理用时 {:.1f}s'.format(time.time() - t0))
         return
 
     def prepare_ply_DALES(self):
@@ -807,14 +817,14 @@ class CommonDataset(PointCloudDataset):
 
             # Get cloud name
             cloud_name = self.cloud_names[i]
-            print(cloud_name)
+            print('\n当前重采样数据文件为：' + cloud_name)
             # Name of the input files
             KDTree_file = join(tree_path, '{:s}_KDTree.pkl'.format(cloud_name))
             sub_ply_file = join(tree_path, '{:s}.ply'.format(cloud_name))
 
-            # Check if inputs have already been computed
+            # 如果已经存在KDTree文件则直接读取，否则创建
             if exists(KDTree_file):
-                print('\nFound KDTree for cloud {:s}, subsampled at {:.3f}'.format(cloud_name, dl))
+                print('存在关于{:s}的KDTree文件, subsampled at {:.3f}'.format(cloud_name, dl))
 
                 # read ply with data
                 data = read_ply(sub_ply_file)
@@ -826,7 +836,7 @@ class CommonDataset(PointCloudDataset):
                     search_tree = pickle.load(f)
 
             else:
-                print('\nPreparing KDTree for cloud {:s}, subsampled at {:.3f}'.format(cloud_name, dl))
+                print('正在处理关于{:s}的KDTree文件, subsampled at {:.3f}'.format(cloud_name, dl))
 
                 # Read ply file
                 data = read_ply(file_path)
@@ -868,12 +878,14 @@ class CommonDataset(PointCloudDataset):
             print('{:.1f} MB loaded in {:.1f}s'.format(size * 1e-6, time.time() - t0))
 
         ############################
-        # Coarse potential locations
+        # Coarse potential locations粗糙潜在位置
         ############################
 
         # Only necessary for validation and test sets
+        # 构建和保存用于点云的粗略 KDTree，以便后续在处理点云时能够快速获取邻域信息。
+        # 粗略KD树是在KD树的基础上，对原始点云数据进行下采样，生成一个较小的点集，然后在这个下采样的点集上构建KD树。
         if self.use_potentials:
-            print('\nPreparing potentials')
+            print('\n开始生成粗略KD树(Coarse KDTree)')
 
             # Restart timer
             t0 = time.time()
@@ -883,35 +895,34 @@ class CommonDataset(PointCloudDataset):
 
             for i, file_path in enumerate(self.files):
 
-                # Get cloud name
+                # 获取点云名称
                 cloud_name = self.cloud_names[i]
 
-                # Name of the input files
+                # 输入文件的名称
                 coarse_KDTree_file = join(tree_path, '{:s}_coarse_KDTree.pkl'.format(cloud_name))
 
-                # Check if inputs have already been computed
+                # 检查输入是否已经计算过
                 if exists(coarse_KDTree_file):
                     # Read pkl with search tree
                     with open(coarse_KDTree_file, 'rb') as f:
                         search_tree = pickle.load(f)
-
                 else:
-                    # Subsample cloud
+                    # 对点云进行下采样
                     sub_points = np.array(self.input_trees[cloud_ind].data, copy=False)
                     coarse_points = grid_subsampling(sub_points.astype(np.float32), sampleDl=pot_dl)
 
-                    # Get chosen neighborhoods
+                    # 获取选择的邻居
                     search_tree = KDTree(coarse_points, leaf_size=10)
 
-                    # Save KDTree
+                    # 保存 KDTree
                     with open(coarse_KDTree_file, 'wb') as f:
                         pickle.dump(search_tree, f)
 
-                # Fill data containers
+                # 填充数据容器
                 self.pot_trees += [search_tree]
                 cloud_ind += 1
 
-            print('Done in {:.1f}s'.format(time.time() - t0))
+            print('Coarse KDTree生成 用时：{:.1f}s'.format(time.time() - t0))
 
         ######################
         # Reprojection indices
@@ -923,7 +934,7 @@ class CommonDataset(PointCloudDataset):
         # Only necessary for validation and test sets
         if self.set in ['validation', 'test']:
 
-            print('\nPreparing reprojection indices for testing')
+            print('\n开始生成测试用重投影指数')
 
             # Get validation/test reprojection indices
             for i, file_path in enumerate(self.files):
@@ -957,9 +968,8 @@ class CommonDataset(PointCloudDataset):
 
                 self.test_proj += [proj_inds]
                 self.validation_labels += [labels]
-                print('{:s} done in {:.1f}s'.format(cloud_name, time.time() - t0))
+            print('测试用重投影指数 用时：{:.1f}s'.format( time.time() - t0))
 
-        print()
         return
 
     def load_subsampled_clouds_DALES(self):
@@ -1137,6 +1147,7 @@ class CommonDataset(PointCloudDataset):
 
         print()
         return
+
     def prepare_ply_ISPRS(self):
 
         print('\nPreparing ply files')
@@ -1158,7 +1169,7 @@ class CommonDataset(PointCloudDataset):
 
                     cloud = read_ply(join(root, file))
                     cloud = np.vstack((cloud['x'], cloud['y'], cloud['z'], cloud['Intensity'], cloud['return_number'],
-                                       cloud['number_of_returns'], cloud['class'])).T
+                                       cloud['number_of_returns'], cloud['label'])).T
 
                     limitMin = np.amin(cloud[:, 0:3], axis=0)
                     cloud[:, 0:3] -= limitMin
@@ -1531,6 +1542,26 @@ class CommonDataset(PointCloudDataset):
         print()
         return
 
+    def load_evaluation_points_color(self, file_path):
+        """
+        Load points (from test or validation split) on which the metrics should be evaluated
+        """
+
+        # Get original points
+        data = read_ply(file_path)
+        if 'H3D' in self.name:
+            return np.vstack((data['red'], data['green'],
+                              data['blue'])).T
+        elif 'ISPRS' in self.name:
+            return np.vstack((data['Intensity'], data['return_number'],
+                              data['number_of_returns'])).T
+        elif 'LASDU' in self.name:
+            return data['Intensity']
+        elif 'DALES' in self.name:
+            return data['reflectance']
+        #默认
+        return np.vstack((data['Intensity'], data['return_number'],
+                          data['number_of_returns'])).T
     def load_evaluation_points(self, file_path):
         """
         Load points (from test or validation split) on which the metrics should be evaluated
@@ -1549,7 +1580,14 @@ class CommonDataset(PointCloudDataset):
         data = read_ply(file_path)
         return np.vstack((data['class'])).T
 
+    def load_evaluation_points_olabel(self, file_path):
+        """
+        Load points (from test or validation split) on which the metrics should be evaluated
+        """
 
+        # Get original points
+        data = read_ply(file_path)
+        return np.vstack((data['class'])).T
 # ----------------------------------------------------------------------------------------------------------------------
 #
 #           Utility classes definition
@@ -1723,7 +1761,7 @@ class CommonSampler(Sampler):
         # Previously saved calibration
         ##############################
 
-        print('\nStarting Calibration (use verbose=True for more details)')
+        print('\n开始校准 (use verbose=True for more details)')
         t0 = time.time()
 
         redo = force_redo
@@ -1779,7 +1817,7 @@ class CommonSampler(Sampler):
         neighb_limits = []
         for layer_ind in range(self.dataset.config.num_layers):
 
-            dl = self.dataset.config.first_subsampling_dl * (2 ** layer_ind)
+            dl = self.dataset.config.first_subsampling_dl * (2**layer_ind)
             if self.dataset.config.deform_layers[layer_ind]:
                 r = dl * self.dataset.config.deform_radius
             else:
@@ -1797,7 +1835,7 @@ class CommonSampler(Sampler):
         if verbose:
             print('Check neighbors limit dictionary')
             for layer_ind in range(self.dataset.config.num_layers):
-                dl = self.dataset.config.first_subsampling_dl * (2 ** layer_ind)
+                dl = self.dataset.config.first_subsampling_dl * (2**layer_ind)
                 if self.dataset.config.deform_layers[layer_ind]:
                     r = dl * self.dataset.config.deform_radius
                 else:
@@ -1819,7 +1857,7 @@ class CommonSampler(Sampler):
             ############################
 
             # From config parameter, compute higher bound of neighbors number in a neighborhood
-            hist_n = int(np.ceil(4 / 3 * np.pi * (self.dataset.config.deform_radius + 1) ** 3))
+            hist_n = int(np.ceil(4 / 3 * np.pi * (self.dataset.config.deform_radius + 1)**3))
 
             # Histogram of neighborhood sizes
             neighb_hists = np.zeros((self.dataset.config.num_layers, hist_n), dtype=np.int32)
@@ -1949,7 +1987,7 @@ class CommonSampler(Sampler):
 
             # Save neighb_limit dictionary
             for layer_ind in range(self.dataset.config.num_layers):
-                dl = self.dataset.config.first_subsampling_dl * (2 ** layer_ind)
+                dl = self.dataset.config.first_subsampling_dl * (2**layer_ind)
                 if self.dataset.config.deform_layers[layer_ind]:
                     r = dl * self.dataset.config.deform_radius
                 else:
@@ -2132,7 +2170,7 @@ def debug_upsampling(dataset, loader):
             p0 = pc1[10, :]
             neighbs0 = up1[10, :]
             neighbs0 = pc2[neighbs0, :] - p0
-            d2 = np.sum(neighbs0 ** 2, axis=1)
+            d2 = np.sum(neighbs0**2, axis=1)
 
             print(neighbs0.shape)
             print(neighbs0[:5])
