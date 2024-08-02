@@ -37,7 +37,8 @@ from tqdm import tqdm
 from utils.ply import read_ply, write_ply
 
 # Metrics
-from utils.metrics import IoU_from_confusions, fast_confusion
+from utils.metrics import IoU_from_confusions, fast_confusion, OA, F1_score
+
 # from sklearn.metrics import confusion_matrix
 
 #from utils.visualizer import show_ModelNet_models
@@ -240,6 +241,11 @@ class ModelTester:
                     # Compute IoUs
                     IoUs = IoU_from_confusions(C)
                     mIoU = np.mean(IoUs)
+                    OAs = OA(C)
+                    print('OA: ',OAs)
+                    F1s = F1_score(C)
+                    print('F1:  ',F1s)
+                    print('IoUs:')
                     s = '{:5.2f} | '.format(100 * mIoU)
                     for IoU in IoUs:
                         s += '{:5.2f} '.format(100 * IoU)
@@ -318,6 +324,11 @@ class ModelTester:
                     print('***********在原始数据集上的精度**********')
                     IoUs = IoU_from_confusions(C)
                     mIoU = np.mean(IoUs)
+                    OAs = OA(C)
+                    print('OA: ', OAs)
+                    F1s = F1_score(C)
+                    print('F1:  ', F1s)
+                    print('IoUs:')
                     s = '{:5.2f} | '.format(100 * mIoU)
                     for IoU in IoUs:
                         s += '{:5.2f} '.format(100 * IoU)
