@@ -15,3 +15,6 @@ Please cite our work if you find it useful.
   doi={10.1109/TGRS.2024.3458013}}
 
 ```
+## Acknowledgements
+
+1. [KPConv-PyTorch](https://github.com/HuguesTHOMAS/KPConv-PyTorch)
